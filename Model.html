@@ -82,7 +82,16 @@
             padding: 14px 16px;
         }
 
-        .legend h2 {
+        .controls {
+            top: 18px;
+            right: 18px;
+            width: min(320px, calc(100vw - 36px));
+            padding: 14px 16px;
+            pointer-events: auto;
+        }
+
+        .legend h2,
+        .controls h2 {
             margin: 0 0 12px;
             font-size: 11px;
             letter-spacing: 0.18em;
@@ -93,6 +102,61 @@
         .legend ul {
             margin: 0;
             padding-left: 16px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+
+        .toggle-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-button {
+            flex: 1;
+            border: 1px solid rgba(255, 182, 111, 0.18);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            font: inherit;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .control-button.active {
+            background: rgba(255, 182, 111, 0.18);
+            border-color: rgba(255, 182, 111, 0.42);
+        }
+
+        .slider-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px 12px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .slider-row label {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .slider-row output {
+            color: var(--text);
+            font-size: 12px;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .slider-row input[type="range"] {
+            grid-column: 1 / -1;
+            width: 100%;
+            accent-color: var(--accent);
         }
 
         .status {
@@ -117,6 +181,14 @@
                 left: 18px;
                 right: 18px;
                 width: auto;
+            }
+
+            .controls {
+                left: 18px;
+                right: 18px;
+                width: auto;
+                top: auto;
+                bottom: 184px;
             }
 
             .status {
@@ -144,12 +216,74 @@
         </ul>
     </div>
 
+    <div class="panel controls">
+        <h2>View Controls</h2>
+        <div class="control-group">
+            <div class="toggle-row">
+                <button class="control-button active" id="cutawayBtn" type="button">Cutaway</button>
+                <button class="control-button" id="fullSphereBtn" type="button">Full Sphere</button>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="slider-row">
+                <label for="coreRange">Core</label>
+                <output id="coreOut">100%</output>
+                <input id="coreRange" type="range" min="0" max="100" value="100">
+            </div>
+            <div class="slider-row">
+                <label for="radiativeRange">Radiative</label>
+                <output id="radiativeOut">72%</output>
+                <input id="radiativeRange" type="range" min="0" max="100" value="72">
+            </div>
+            <div class="slider-row">
+                <label for="convectiveRange">Convective</label>
+                <output id="convectiveOut">58%</output>
+                <input id="convectiveRange" type="range" min="0" max="100" value="58">
+            </div>
+            <div class="slider-row">
+                <label for="shellRange">Shell</label>
+                <output id="shellOut">92%</output>
+                <input id="shellRange" type="range" min="0" max="100" value="92">
+            </div>
+            <div class="slider-row">
+                <label for="coronaRange">Corona</label>
+                <output id="coronaOut">100%</output>
+                <input id="coronaRange" type="range" min="0" max="100" value="100">
+            </div>
+        </div>
+    </div>
+
     <div class="status" id="statusLine">Interactive cutaway model live</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         const statusLine = document.getElementById("statusLine");
+        const cutawayBtn = document.getElementById("cutawayBtn");
+        const fullSphereBtn = document.getElementById("fullSphereBtn");
+
+        const rangeControls = {
+            core: {
+                input: document.getElementById("coreRange"),
+                output: document.getElementById("coreOut")
+            },
+            radiative: {
+                input: document.getElementById("radiativeRange"),
+                output: document.getElementById("radiativeOut")
+            },
+            convective: {
+                input: document.getElementById("convectiveRange"),
+                output: document.getElementById("convectiveOut")
+            },
+            shell: {
+                input: document.getElementById("shellRange"),
+                output: document.getElementById("shellOut")
+            },
+            corona: {
+                input: document.getElementById("coronaRange"),
+                output: document.getElementById("coronaOut")
+            }
+        };
 
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -826,7 +960,50 @@
             prominenceMaterial
         ];
 
-        statusLine.textContent = "Interactive cutaway model live";
+        let currentCutAngle = 1.25;
+
+        function setCutaway(enabled) {
+            currentCutAngle = enabled ? 1.25 : 0.0;
+            animatedMaterials.forEach((material) => {
+                if (material.uniforms.cutAngle) {
+                    material.uniforms.cutAngle.value = currentCutAngle;
+                }
+            });
+            cutPlane.visible = enabled;
+            cutawayBtn.classList.toggle("active", enabled);
+            fullSphereBtn.classList.toggle("active", !enabled);
+            statusLine.textContent = enabled ? "Interactive cutaway model live" : "Interactive full sphere model live";
+        }
+
+        function setMaterialOpacity(material, value) {
+            material.transparent = value < 0.999;
+            material.opacity = value;
+            if (material.uniforms.opacityLevel) {
+                material.uniforms.opacityLevel.value = value;
+            }
+        }
+
+        function bindOpacityControl(key, material) {
+            const { input, output } = rangeControls[key];
+            const apply = () => {
+                const value = Number(input.value) / 100;
+                output.textContent = `${input.value}%`;
+                setMaterialOpacity(material, value);
+            };
+            input.addEventListener("input", apply);
+            apply();
+        }
+
+        cutawayBtn.addEventListener("click", () => setCutaway(true));
+        fullSphereBtn.addEventListener("click", () => setCutaway(false));
+
+        bindOpacityControl("core", coreLayer.material);
+        bindOpacityControl("radiative", radiativeLayer.material);
+        bindOpacityControl("convective", convectiveLayer.material);
+        bindOpacityControl("shell", shellMaterial);
+        bindOpacityControl("corona", coronaMaterial);
+
+        setCutaway(true);
 
         let lastTime = 0;
 

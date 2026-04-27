@@ -3,203 +3,1046 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASA Solar Simulation - Solar Altar</title>
+    <title>Solar Interior Model</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        canvas { display: block; }
+        :root {
+            color-scheme: dark;
+            --bg: #04060c;
+            --panel: rgba(9, 13, 20, 0.72);
+            --border: rgba(255, 173, 84, 0.2);
+            --text: rgba(244, 246, 249, 0.95);
+            --muted: rgba(203, 211, 223, 0.72);
+            --accent: #ffb66f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255, 118, 24, 0.08), transparent 12%),
+                radial-gradient(circle at 50% 50%, rgba(255, 172, 93, 0.04), transparent 28%),
+                linear-gradient(180deg, #0a0c13 0%, #03050b 100%);
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .panel {
+            position: fixed;
+            z-index: 10;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        .hero {
+            top: 18px;
+            left: 18px;
+            max-width: min(450px, calc(100vw - 36px));
+            padding: 16px 18px;
+        }
+
+        .hero .eyebrow {
+            margin-bottom: 8px;
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font-size: clamp(24px, 4vw, 38px);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .hero p,
+        .legend li,
+        .legend p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .legend {
+            right: 18px;
+            bottom: 18px;
+            width: min(360px, calc(100vw - 36px));
+            padding: 14px 16px;
+        }
+
+        .controls {
+            top: 18px;
+            right: 18px;
+            width: min(320px, calc(100vw - 36px));
+            padding: 14px 16px;
+            pointer-events: auto;
+        }
+
+        .legend h2,
+        .controls h2 {
+            margin: 0 0 12px;
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .legend ul {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+
+        .toggle-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-button {
+            flex: 1;
+            border: 1px solid rgba(255, 182, 111, 0.18);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            font: inherit;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .control-button.active {
+            background: rgba(255, 182, 111, 0.18);
+            border-color: rgba(255, 182, 111, 0.42);
+        }
+
+        .slider-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px 12px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .slider-row label {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .slider-row output {
+            color: var(--text);
+            font-size: 12px;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .slider-row input[type="range"] {
+            grid-column: 1 / -1;
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        .status {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 10;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(8, 11, 18, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(240, 243, 247, 0.88);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        @media (max-width: 740px) {
+            .legend {
+                left: 18px;
+                right: 18px;
+                width: auto;
+            }
+
+            .controls {
+                left: 18px;
+                right: 18px;
+                width: auto;
+                top: auto;
+                bottom: 184px;
+            }
+
+            .status {
+                width: calc(100vw - 36px);
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="panel hero">
+        <div class="eyebrow">Layered Solar Interior</div>
+        <h1>Full Sun Model</h1>
+        <p>Nowa kula zbudowana od zera jako pełny model warstw Słońca. Zamiast płaskiej tekstury na powierzchni masz przekrój pokazujący rdzeń, strefę promienistą, konwekcyjną, fotosferę i koronę oraz żywy ruch plazmy na zewnętrznej warstwie.</p>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <div class="panel legend">
+        <h2>Model Layers</h2>
+        <ul>
+            <li>Rdzeń: gęsty, jasny obszar reakcji termojądrowych</li>
+            <li>Strefa promienista: spokojniejsze, gorące warstwy transportu energii</li>
+            <li>Strefa konwekcyjna: komórki plazmy i wznoszące pęcherze energii</li>
+            <li>Fotosfera: żywa powierzchnia z filamentami i aktywnymi obszarami</li>
+            <li>Korona: cienka warstwa zewnętrzna z emisją przy brzegu</li>
+        </ul>
+    </div>
 
-<script>
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 2.5;
+    <div class="panel controls">
+        <h2>View Controls</h2>
+        <div class="control-group">
+            <div class="toggle-row">
+                <button class="control-button active" id="cutawayBtn" type="button">Cutaway</button>
+                <button class="control-button" id="fullSphereBtn" type="button">Full Sphere</button>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="slider-row">
+                <label for="coreRange">Core</label>
+                <output id="coreOut">100%</output>
+                <input id="coreRange" type="range" min="0" max="100" value="100">
+            </div>
+            <div class="slider-row">
+                <label for="radiativeRange">Radiative</label>
+                <output id="radiativeOut">72%</output>
+                <input id="radiativeRange" type="range" min="0" max="100" value="72">
+            </div>
+            <div class="slider-row">
+                <label for="convectiveRange">Convective</label>
+                <output id="convectiveOut">58%</output>
+                <input id="convectiveRange" type="range" min="0" max="100" value="58">
+            </div>
+            <div class="slider-row">
+                <label for="shellRange">Shell</label>
+                <output id="shellOut">92%</output>
+                <input id="shellRange" type="range" min="0" max="100" value="92">
+            </div>
+            <div class="slider-row">
+                <label for="coronaRange">Corona</label>
+                <output id="coronaOut">100%</output>
+                <input id="coronaRange" type="range" min="0" max="100" value="100">
+            </div>
+        </div>
+    </div>
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.body.appendChild(renderer.domElement);
+    <div class="status" id="statusLine">Interactive cutaway model live</div>
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.minDistance = 1.2;
-controls.maxDistance = 5;
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        const statusLine = document.getElementById("statusLine");
+        const cutawayBtn = document.getElementById("cutawayBtn");
+        const fullSphereBtn = document.getElementById("fullSphereBtn");
 
-// =======================
-// 🌋 NASA PLASMA SHADER (3D fBM + Warping)
-// =======================
+        const rangeControls = {
+            core: {
+                input: document.getElementById("coreRange"),
+                output: document.getElementById("coreOut")
+            },
+            radiative: {
+                input: document.getElementById("radiativeRange"),
+                output: document.getElementById("radiativeOut")
+            },
+            convective: {
+                input: document.getElementById("convectiveRange"),
+                output: document.getElementById("convectiveOut")
+            },
+            shell: {
+                input: document.getElementById("shellRange"),
+                output: document.getElementById("shellOut")
+            },
+            corona: {
+                input: document.getElementById("coronaRange"),
+                output: document.getElementById("coronaOut")
+            }
+        };
 
-const vertexShader = `
-varying vec3 vNormal;
-varying vec3 vPosition;
-varying vec2 vUv;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0.9, 0.4, 5.8);
 
-void main() {
-    vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
-    vPosition = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.body.appendChild(renderer.domElement);
 
-const fragmentShader = `
-uniform float time;
-varying vec3 vNormal;
-varying vec3 vPosition;
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.045;
+        controls.minDistance = 3.6;
+        controls.maxDistance = 9;
+        controls.enablePan = false;
+        controls.target.set(0, 0, 0);
 
-// Funkcje pomocnicze do generowania szumu 3D
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+        scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 
-float snoise(vec3 v) {
-    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-    vec3 i  = floor(v + dot(v, C.yyy));
-    vec3 x0 = v - i + dot(i, C.xxx);
-    vec3 g = step(x0.yzx, x0.xyz);
-    vec3 l = 1.0 - g;
-    vec3 i1 = min(g.xyz, l.zxy);
-    vec3 i2 = max(g.xyz, l.zxy);
-    vec3 x1 = x0 - i1 + C.xxx;
-    vec3 x2 = x0 - i2 + C.yyy;
-    vec3 x3 = x0 - D.yyy;
-    i = mod289(i);
-    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-    vec4 j = p - 49.0 * floor(p * (1.0/49.0));
-    vec4 x_ = floor(j * (1.0/7.0));
-    vec4 y_ = floor(j - 7.0 * x_);
-    vec4 x = x_ * (1.0/7.0) + 0.5/7.0;
-    vec4 y = y_ * (1.0/7.0) + 0.5/7.0;
-    vec4 h = 1.0 - abs(x) - abs(y);
-    vec4 b0 = vec4(x.xy, y.xy);
-    vec4 b1 = vec4(x.zw, y.zw);
-    vec4 s0 = floor(b0)*2.0 + 1.0;
-    vec4 s1 = floor(b1)*2.0 + 1.0;
-    vec4 sh = -step(h, vec4(0.0));
-    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-    vec3 p0 = vec3(a0.xy, h.x);
-    vec3 p1 = vec3(a0.zw, h.y);
-    vec3 p2 = vec3(a1.xy, h.z);
-    vec3 p3 = vec3(a1.zw, h.w);
-    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-    m = m * m; return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-}
+        const solarLight = new THREE.PointLight(0xffb164, 3.2, 40, 2);
+        solarLight.position.set(0, 0, 0);
+        scene.add(solarLight);
 
-// Fractal Brownian Motion
-float fbm(vec3 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-        v += a * snoise(p);
-        p *= 2.0;
-        a *= 0.5;
-    }
-    return v;
-}
+        const rimLight = new THREE.DirectionalLight(0xffd7b0, 0.6);
+        rimLight.position.set(3, 2.5, 3);
+        scene.add(rimLight);
 
-void main() {
-    // Domain Warping - klucz do realizmu
-    vec3 p = vPosition * 2.5;
-    float q = fbm(p + time * 0.1);
-    float r = fbm(p + q + time * 0.15);
-    
-    // Tworzenie "gorących" włókien plazmy
-    float strength = smoothstep(0.2, 0.8, r);
-    
-    // Paleta NASA (Głęboki burgund -> Ognisty pomarańcz -> Złoty)
-    vec3 deepRed = vec3(0.2, 0.0, 0.0);
-    vec3 plasma = vec3(1.0, 0.25, 0.0);
-    vec3 core = vec3(1.0, 0.7, 0.1);
-    
-    vec3 color = mix(deepRed, plasma, strength);
-    color = mix(color, core, pow(strength, 3.0));
+        function createStarfield() {
+            const count = 4000;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const geometry = new THREE.BufferGeometry();
 
-    // Efekt granulacji (małe kropki na słońcu)
-    float grain = snoise(vPosition * 50.0) * 0.1;
-    color += grain * strength;
+            for (let i = 0; i < count; i += 1) {
+                const radius = 20 + Math.random() * 120;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const index = i * 3;
+                const tint = 0.75 + Math.random() * 0.25;
 
-    // Atmosfera/Fresnel
-    float fresnel = pow(1.0 - dot(vNormal, vec3(0,0,1)), 3.0);
-    color += fresnel * vec3(1.0, 0.4, 0.1);
+                positions[index] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[index + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[index + 2] = radius * Math.cos(phi);
 
-    gl_FragColor = vec4(color, 1.0);
-}
-`;
+                colors[index] = 0.82 * tint;
+                colors[index + 1] = 0.85 * tint;
+                colors[index + 2] = tint;
+            }
 
-const starMaterial = new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
-    vertexShader,
-    fragmentShader
-});
+            geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-const star = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 128), starMaterial);
-scene.add(star);
-
-// =======================
-// 🌟 ADVANCED CORONA
-// =======================
-
-const coronaGeometry = new THREE.SphereGeometry(1.4, 64, 64);
-const coronaMaterial = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    uniforms: { time: { value: 0 } },
-    vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-            vNormal = normalize(normalMatrix * normal);
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            return new THREE.Points(geometry, new THREE.PointsMaterial({
+                size: 0.08,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.78,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            }));
         }
-    `,
-    fragmentShader: `
-        varying vec3 vNormal;
-        uniform float time;
-        void main() {
-            float intensity = pow(0.6 - dot(vNormal, vec3(0,0,1)), 4.0);
-            float pulse = 0.8 + 0.2 * sin(time * 2.0);
-            gl_FragColor = vec4(1.0, 0.2, 0.0, 1.0) * intensity * pulse;
+
+        scene.add(createStarfield());
+
+        const layerVertexShader = `
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
+
+            void main() {
+                vObjectPosition = position;
+                vWorldNormal = normalize(normalMatrix * normal);
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+
+        const layerFragmentShader = `
+            uniform float time;
+            uniform float radius;
+            uniform vec3 colorA;
+            uniform vec3 colorB;
+            uniform vec3 colorC;
+            uniform float noiseScale;
+            uniform float pulseSpeed;
+            uniform float brightness;
+            uniform float opacityLevel;
+            uniform float flowStrength;
+            uniform float cutAngle;
+            uniform float edgeGlow;
+
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
+
+            mat2 rot(float a) {
+                float s = sin(a);
+                float c = cos(a);
+                return mat2(c, -s, s, c);
+            }
+
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+                for (int i = 0; i < 5; i++) {
+                    value += amplitude * sin(p.x) * cos(p.y);
+                    p = m * p + vec2(0.9, -1.4);
+                    amplitude *= 0.5;
+                }
+                return value * 0.5 + 0.5;
+            }
+
+            void main() {
+                vec3 obj = vObjectPosition / radius;
+                float angle = atan(obj.z, obj.x);
+                float normalized = angle < 0.0 ? angle + 6.28318530718 : angle;
+
+                if (normalized < cutAngle && obj.z > -0.08) {
+                    discard;
+                }
+
+                vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
+                uv.x += time * flowStrength;
+                vec2 p1 = rot(time * 0.15) * (uv * noiseScale);
+                vec2 p2 = rot(-time * 0.11) * (uv * (noiseScale * 1.8) + vec2(2.3, -1.5));
+                vec2 p3 = rot(time * 0.08) * (uv * (noiseScale * 3.1) - vec2(4.7, 2.1));
+
+                float baseNoise = fbm(p1);
+                float detailNoise = fbm(p2);
+                float streakNoise = fbm(p3);
+                float pulse = 0.92 + 0.08 * sin(time * pulseSpeed + normalized * 4.0);
+
+                vec3 color = mix(colorA, colorB, baseNoise);
+                color = mix(color, colorC, detailNoise * 0.72);
+                color += colorB * streakNoise * 0.18;
+
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float fresnel = pow(1.0 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 2.4);
+                float cutFace = smoothstep(0.0, 0.08, obj.z + 0.02) * smoothstep(cutAngle + 0.18, cutAngle, normalized);
+                color += colorC * cutFace * edgeGlow;
+                color += colorB * fresnel * edgeGlow * 0.22;
+
+                gl_FragColor = vec4(color * brightness * pulse, opacityLevel);
+            }
+        `;
+
+        const photosphereFragmentShader = `
+            uniform float time;
+            uniform float radius;
+            uniform float cutAngle;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
+
+            mat2 rot(float a) {
+                float s = sin(a);
+                float c = cos(a);
+                return mat2(c, -s, s, c);
+            }
+
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.7, 1.3, -1.3, 1.7);
+                for (int i = 0; i < 6; i++) {
+                    value += amplitude * sin(p.x) * cos(p.y);
+                    p = m * p + vec2(1.2, -0.9);
+                    amplitude *= 0.5;
+                }
+                return value * 0.5 + 0.5;
+            }
+
+            float ridge(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.9, 1.1, -1.1, 1.9);
+                for (int i = 0; i < 5; i++) {
+                    float n = sin(p.x) * cos(p.y);
+                    value += amplitude * (1.0 - abs(n));
+                    p = m * p + vec2(1.8, -1.2);
+                    amplitude *= 0.55;
+                }
+                return clamp(value, 0.0, 1.0);
+            }
+
+            float sunspotField(vec2 uv) {
+                vec2 centers[6];
+                centers[0] = vec2(0.16, 0.43);
+                centers[1] = vec2(0.31, 0.58);
+                centers[2] = vec2(0.47, 0.47);
+                centers[3] = vec2(0.63, 0.61);
+                centers[4] = vec2(0.76, 0.39);
+                centers[5] = vec2(0.88, 0.54);
+                float field = 0.0;
+                for (int i = 0; i < 6; i++) {
+                    vec2 center = centers[i];
+                    float d = length(uv - center);
+                    float umbra = 1.0 - smoothstep(0.018, 0.055, d);
+                    float penumbra = 1.0 - smoothstep(0.04, 0.1, d);
+                    field = max(field, umbra * 0.95 + penumbra * 0.45);
+                }
+                return clamp(field, 0.0, 1.0);
+            }
+
+            void main() {
+                vec3 obj = vObjectPosition / radius;
+                float angle = atan(obj.z, obj.x);
+                float normalized = angle < 0.0 ? angle + 6.28318530718 : angle;
+
+                if (normalized < cutAngle && obj.z > -0.08) {
+                    discard;
+                }
+
+                vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
+                uv.x += time * 0.01;
+                vec2 flowA = rot(time * 0.12) * (uv * vec2(16.0, 8.5));
+                vec2 flowB = rot(-time * 0.07) * (uv * vec2(34.0, 18.0) + vec2(3.4, -2.3));
+                vec2 flowC = rot(time * 0.045) * (uv * vec2(64.0, 28.0) - vec2(6.1, 1.9));
+                vec2 flowD = rot(-time * 0.05) * (uv * vec2(90.0, 42.0) + vec2(-2.6, 4.4));
+
+                float convection = fbm(flowA);
+                float cells = fbm(flowB);
+                float filaments = ridge(flowC);
+                float threads = ridge(flowD);
+                float activeBands = smoothstep(0.54, 0.86, fbm(uv * vec2(9.0, 4.0) + vec2(time * 0.05, -time * 0.035)));
+                float darkLanes = smoothstep(0.52, 0.9, threads * (1.0 - cells));
+                float hotKnots = smoothstep(0.68, 0.96, cells + activeBands * 0.35);
+                float sunspots = sunspotField(fract(uv));
+
+                vec3 dark = vec3(0.34, 0.11, 0.03);
+                vec3 ember = vec3(0.8, 0.29, 0.08);
+                vec3 mid = vec3(0.98, 0.5, 0.11);
+                vec3 bright = vec3(1.0, 0.82, 0.42);
+                vec3 flare = vec3(1.0, 0.67, 0.2);
+
+                vec3 color = mix(dark, ember, convection);
+                color = mix(color, mid, cells * 0.72);
+                color = mix(color, bright, hotKnots * 0.64);
+                color += flare * filaments * 0.16;
+                color += flare * activeBands * 0.22;
+                color = mix(color, dark * 0.8, darkLanes * 0.38);
+                color = mix(color, vec3(0.08, 0.02, 0.01), sunspots * 0.92);
+                color += bright * sunspots * 0.08;
+
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float fresnel = pow(1.0 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 2.7);
+                float limbDarkening = pow(max(dot(normalize(vWorldNormal), viewDir), 0.0), 0.5);
+                float cutFace = smoothstep(0.0, 0.07, obj.z + 0.01) * smoothstep(cutAngle + 0.16, cutAngle, normalized);
+
+                color *= mix(0.72, 1.0, limbDarkening);
+                color += vec3(1.0, 0.34, 0.08) * fresnel * (0.08 + activeBands * 0.08);
+                color += bright * cutFace * 0.34;
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        const coronaVertexShader = `
+            uniform float time;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            void main() {
+                vObjectPosition = position;
+                vWorldNormal = normalize(normalMatrix * normal);
+                vec3 displaced = position * (1.0 + 0.02 * sin(time * 0.8 + position.y * 7.0 + position.x * 6.0));
+                vec4 worldPosition = modelMatrix * vec4(displaced, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+
+        const coronaFragmentShader = `
+            uniform float time;
+            uniform float radius;
+            uniform float cutAngle;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.8, 1.1, -1.1, 1.8);
+                for (int i = 0; i < 5; i++) {
+                    value += amplitude * sin(p.x) * cos(p.y);
+                    p = m * p + vec2(1.4, -0.7);
+                    amplitude *= 0.5;
+                }
+                return value * 0.5 + 0.5;
+            }
+
+            void main() {
+                vec3 obj = vObjectPosition / radius;
+                float angle = atan(obj.z, obj.x);
+                float normalized = angle < 0.0 ? angle + 6.28318530718 : angle;
+
+                if (normalized < cutAngle && obj.z > -0.08) {
+                    discard;
+                }
+
+                vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
+                float textureFlow = fbm(uv * vec2(12.0, 8.0) + vec2(time * 0.06, -time * 0.08));
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float rim = pow(1.08 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 4.8);
+                float alpha = rim * (0.18 + textureFlow * 0.44);
+                vec3 color = mix(vec3(0.96, 0.18, 0.04), vec3(1.0, 0.72, 0.24), textureFlow);
+                gl_FragColor = vec4(color, alpha);
+            }
+        `;
+
+        const prominenceVertexShader = `
+            uniform float time;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            void main() {
+                vObjectPosition = position;
+                vWorldNormal = normalize(normalMatrix * normal);
+                vec3 displaced = position * (1.0 + 0.03 * sin(time * 0.9 + position.y * 9.0 + position.x * 5.0));
+                vec4 worldPosition = modelMatrix * vec4(displaced, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+
+        const prominenceFragmentShader = `
+            uniform float time;
+            uniform float radius;
+            uniform float cutAngle;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            mat2 rot(float a) {
+                float s = sin(a);
+                float c = cos(a);
+                return mat2(c, -s, s, c);
+            }
+
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.85, 1.15, -1.15, 1.85);
+                for (int i = 0; i < 5; i++) {
+                    value += amplitude * sin(p.x) * cos(p.y);
+                    p = m * p + vec2(1.6, -0.9);
+                    amplitude *= 0.55;
+                }
+                return value * 0.5 + 0.5;
+            }
+
+            void main() {
+                vec3 obj = vObjectPosition / radius;
+                float angle = atan(obj.z, obj.x);
+                float normalized = angle < 0.0 ? angle + 6.28318530718 : angle;
+
+                if (normalized < cutAngle && obj.z > -0.08) {
+                    discard;
+                }
+
+                vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
+                vec2 plumeUv = rot(time * 0.06) * (uv * vec2(16.0, 8.0));
+                vec2 detailUv = rot(-time * 0.1) * (uv * vec2(34.0, 18.0) + vec2(3.0, -2.0));
+
+                float activity = fbm(plumeUv);
+                float detail = fbm(detailUv);
+                float belt = smoothstep(0.22, 0.45, obj.y + 0.08) * smoothstep(0.3, 0.0, abs(obj.y));
+                float plumeBandA = smoothstep(0.74, 0.92, activity + detail * 0.22);
+                float plumeBandB = smoothstep(0.72, 0.94, fbm(uv * vec2(12.0, 22.0) + vec2(-time * 0.07, time * 0.1)));
+                float prominences = max(plumeBandA * 0.9, plumeBandB * 0.75) * belt;
+
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float rim = pow(1.05 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 5.0);
+                float edge = smoothstep(0.22, 1.0, rim);
+                float alpha = prominences * edge * (0.18 + detail * 0.55);
+
+                vec3 ember = vec3(0.95, 0.18, 0.05);
+                vec3 hot = vec3(1.0, 0.48, 0.14);
+                vec3 core = vec3(1.0, 0.78, 0.34);
+                vec3 color = mix(ember, hot, detail);
+                color = mix(color, core, prominences * 0.7);
+
+                gl_FragColor = vec4(color, alpha);
+            }
+        `;
+
+        const shellVertexShader = `
+            uniform float time;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            void main() {
+                vObjectPosition = position;
+                vWorldNormal = normalize(normalMatrix * normal);
+                vec3 displaced = position * (1.0 + 0.012 * sin(time * 0.55 + position.y * 10.0 + position.x * 7.0));
+                vec4 worldPosition = modelMatrix * vec4(displaced, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+
+        const shellFragmentShader = `
+            uniform float time;
+            uniform float radius;
+            uniform float cutAngle;
+            varying vec3 vObjectPosition;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPosition;
+
+            mat2 rot(float a) {
+                float s = sin(a);
+                float c = cos(a);
+                return mat2(c, -s, s, c);
+            }
+
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(1.9, 1.15, -1.15, 1.9);
+                for (int i = 0; i < 6; i++) {
+                    value += amplitude * sin(p.x) * cos(p.y);
+                    p = m * p + vec2(1.3, -0.95);
+                    amplitude *= 0.55;
+                }
+                return value * 0.5 + 0.5;
+            }
+
+            float ridge(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                mat2 m = mat2(2.1, 1.0, -1.0, 2.1);
+                for (int i = 0; i < 5; i++) {
+                    float n = sin(p.x) * cos(p.y);
+                    value += amplitude * (1.0 - abs(n));
+                    p = m * p + vec2(1.9, -1.1);
+                    amplitude *= 0.58;
+                }
+                return clamp(value, 0.0, 1.0);
+            }
+
+            float sunspotField(vec2 uv) {
+                vec2 centers[6];
+                centers[0] = vec2(0.16, 0.43);
+                centers[1] = vec2(0.31, 0.58);
+                centers[2] = vec2(0.47, 0.47);
+                centers[3] = vec2(0.63, 0.61);
+                centers[4] = vec2(0.76, 0.39);
+                centers[5] = vec2(0.88, 0.54);
+                float field = 0.0;
+                for (int i = 0; i < 6; i++) {
+                    vec2 center = centers[i];
+                    float d = length(uv - center);
+                    float umbra = 1.0 - smoothstep(0.018, 0.055, d);
+                    float penumbra = 1.0 - smoothstep(0.04, 0.1, d);
+                    field = max(field, umbra * 0.9 + penumbra * 0.4);
+                }
+                return clamp(field, 0.0, 1.0);
+            }
+
+            void main() {
+                vec3 obj = vObjectPosition / radius;
+                float angle = atan(obj.z, obj.x);
+                float normalized = angle < 0.0 ? angle + 6.28318530718 : angle;
+
+                if (normalized < cutAngle && obj.z > -0.08) {
+                    discard;
+                }
+
+                vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
+                uv.x += time * 0.012;
+
+                vec2 flowA = rot(time * 0.08) * (uv * vec2(18.0, 10.0));
+                vec2 flowB = rot(-time * 0.05) * (uv * vec2(42.0, 20.0) + vec2(2.4, -1.9));
+                vec2 flowC = rot(time * 0.03) * (uv * vec2(80.0, 36.0) - vec2(5.8, 2.6));
+                vec2 flowD = rot(-time * 0.02) * (uv * vec2(14.0, 26.0) + vec2(-2.0, 4.0));
+
+                float convection = fbm(flowA);
+                float cells = fbm(flowB);
+                float filaments = ridge(flowC);
+                float arches = ridge(flowD);
+                float active = smoothstep(0.62, 0.9, fbm(uv * vec2(10.0, 4.0) + vec2(time * 0.04, -time * 0.025)));
+                float plasma = max(filaments * 0.88, arches * 0.72);
+                float sunspots = sunspotField(fract(uv));
+
+                vec3 dark = vec3(0.28, 0.09, 0.03);
+                vec3 ember = vec3(0.86, 0.28, 0.08);
+                vec3 hot = vec3(1.0, 0.56, 0.12);
+                vec3 core = vec3(1.0, 0.84, 0.42);
+
+                vec3 color = mix(dark, ember, convection);
+                color = mix(color, hot, cells * 0.7);
+                color += hot * plasma * 0.14;
+                color += core * active * 0.22;
+                color = mix(color, vec3(0.1, 0.025, 0.01), sunspots * 0.78);
+                color += core * sunspots * 0.05;
+
+                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                float facing = max(dot(normalize(vWorldNormal), viewDir), 0.0);
+                float fresnel = pow(1.0 - facing, 3.2);
+                float rim = pow(1.08 - facing, 5.8);
+                float alpha = 0.16 + plasma * 0.12 + active * 0.08;
+                alpha += rim * (0.14 + active * 0.25);
+
+                float cutFace = smoothstep(0.0, 0.06, obj.z + 0.015) * smoothstep(cutAngle + 0.14, cutAngle, normalized);
+                color += core * cutFace * 0.28;
+                color += vec3(1.0, 0.38, 0.1) * fresnel * 0.12;
+
+                gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.92));
+            }
+        `;
+
+        function makeLayer(radius, colors, config = {}) {
+            const material = new THREE.ShaderMaterial({
+                transparent: config.transparent ?? true,
+                depthWrite: config.depthWrite ?? false,
+                side: config.side ?? THREE.DoubleSide,
+                blending: config.blending ?? THREE.NormalBlending,
+                uniforms: {
+                    time: { value: 0 },
+                    radius: { value: radius },
+                    colorA: { value: new THREE.Color(colors[0]) },
+                    colorB: { value: new THREE.Color(colors[1]) },
+                    colorC: { value: new THREE.Color(colors[2]) },
+                    noiseScale: { value: config.noiseScale ?? 8 },
+                    pulseSpeed: { value: config.pulseSpeed ?? 1.2 },
+                    brightness: { value: config.brightness ?? 1 },
+                    opacityLevel: { value: config.opacityLevel ?? 0.95 },
+                    flowStrength: { value: config.flowStrength ?? 0.01 },
+                    cutAngle: { value: config.cutAngle ?? 1.2 },
+                    edgeGlow: { value: config.edgeGlow ?? 0.4 }
+                },
+                vertexShader: layerVertexShader,
+                fragmentShader: layerFragmentShader
+            });
+
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 192, 192), material);
+            return { mesh, material };
         }
-    `
-});
 
-const corona = new THREE.Mesh(coronaGeometry, coronaMaterial);
-scene.add(corona);
+        const solarGroup = new THREE.Group();
+        solarGroup.rotation.y = -0.52;
+        scene.add(solarGroup);
 
-// =======================
-// 🔄 ANIMATION LOOP
-// =======================
+        const coreLayer = makeLayer(0.42, ["#fff1b0", "#ffbf59", "#fff4da"], {
+            noiseScale: 10,
+            pulseSpeed: 2.1,
+            brightness: 1.45,
+            opacityLevel: 1,
+            flowStrength: 0.018,
+            cutAngle: 1.25,
+            edgeGlow: 0.55
+        });
 
-function animate(t) {
-    requestAnimationFrame(animate);
-    const timeValue = t * 0.001;
-    
-    starMaterial.uniforms.time.value = timeValue;
-    coronaMaterial.uniforms.time.value = timeValue;
-    
-    star.rotation.y += 0.0015;
-    
-    controls.update();
-    renderer.render(scene, camera);
-}
+        const radiativeLayer = makeLayer(0.82, ["#ff9b31", "#ffca6c", "#ffe39b"], {
+            noiseScale: 9,
+            pulseSpeed: 1.4,
+            brightness: 1.12,
+            opacityLevel: 0.72,
+            flowStrength: 0.012,
+            cutAngle: 1.25,
+            edgeGlow: 0.42
+        });
 
-animate(0);
+        const convectiveLayer = makeLayer(1.18, ["#c95512", "#f98923", "#ffd066"], {
+            noiseScale: 13,
+            pulseSpeed: 1.8,
+            brightness: 1.0,
+            opacityLevel: 0.58,
+            flowStrength: 0.025,
+            cutAngle: 1.25,
+            edgeGlow: 0.48
+        });
 
-window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
+        const photosphereMaterial = new THREE.ShaderMaterial({
+            transparent: false,
+            depthWrite: true,
+            side: THREE.DoubleSide,
+            uniforms: {
+                time: { value: 0 },
+                radius: { value: 1.5 },
+                cutAngle: { value: 1.25 }
+            },
+            vertexShader: layerVertexShader,
+            fragmentShader: photosphereFragmentShader
+        });
 
+        const photosphere = new THREE.Mesh(new THREE.SphereGeometry(1.5, 224, 224), photosphereMaterial);
+
+        const coronaMaterial = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                time: { value: 0 },
+                radius: { value: 1.63 },
+                cutAngle: { value: 1.25 }
+            },
+            vertexShader: coronaVertexShader,
+            fragmentShader: coronaFragmentShader
+        });
+
+        const corona = new THREE.Mesh(new THREE.SphereGeometry(1.63, 192, 192), coronaMaterial);
+
+        const prominenceMaterial = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                time: { value: 0 },
+                radius: { value: 1.56 },
+                cutAngle: { value: 1.25 }
+            },
+            vertexShader: prominenceVertexShader,
+            fragmentShader: prominenceFragmentShader
+        });
+
+        const prominences = new THREE.Mesh(new THREE.SphereGeometry(1.56, 192, 192), prominenceMaterial);
+        prominences.visible = false;
+
+        const shellMaterial = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                time: { value: 0 },
+                radius: { value: 1.545 },
+                cutAngle: { value: 1.25 }
+            },
+            vertexShader: shellVertexShader,
+            fragmentShader: shellFragmentShader
+        });
+
+        const shell = new THREE.Mesh(new THREE.SphereGeometry(1.545, 224, 224), shellMaterial);
+
+        const cutPlaneMaterial = new THREE.MeshBasicMaterial({
+            color: 0x33170a,
+            transparent: true,
+            opacity: 0.42,
+            side: THREE.DoubleSide
+        });
+
+        const cutPlane = new THREE.Mesh(new THREE.CircleGeometry(1.5, 96), cutPlaneMaterial);
+        cutPlane.position.z = 0.0;
+        cutPlane.rotation.y = Math.PI / 2;
+        cutPlane.position.x = 0.0;
+
+        solarGroup.add(coreLayer.mesh);
+        solarGroup.add(radiativeLayer.mesh);
+        solarGroup.add(convectiveLayer.mesh);
+        solarGroup.add(photosphere);
+        solarGroup.add(shell);
+        solarGroup.add(corona);
+        solarGroup.add(prominences);
+        solarGroup.add(cutPlane);
+
+        const animatedMaterials = [
+            coreLayer.material,
+            radiativeLayer.material,
+            convectiveLayer.material,
+            photosphereMaterial,
+            shellMaterial,
+            coronaMaterial,
+            prominenceMaterial
+        ];
+
+        let currentCutAngle = 1.25;
+
+        function setCutaway(enabled) {
+            currentCutAngle = enabled ? 1.25 : 0.0;
+            animatedMaterials.forEach((material) => {
+                if (material.uniforms.cutAngle) {
+                    material.uniforms.cutAngle.value = currentCutAngle;
+                }
+            });
+            cutPlane.visible = enabled;
+            cutawayBtn.classList.toggle("active", enabled);
+            fullSphereBtn.classList.toggle("active", !enabled);
+            statusLine.textContent = enabled ? "Interactive cutaway model live" : "Interactive full sphere model live";
+        }
+
+        function setMaterialOpacity(material, value) {
+            material.transparent = value < 0.999;
+            material.opacity = value;
+            if (material.uniforms.opacityLevel) {
+                material.uniforms.opacityLevel.value = value;
+            }
+        }
+
+        function bindOpacityControl(key, material) {
+            const { input, output } = rangeControls[key];
+            const apply = () => {
+                const value = Number(input.value) / 100;
+                output.textContent = `${input.value}%`;
+                setMaterialOpacity(material, value);
+            };
+            input.addEventListener("input", apply);
+            apply();
+        }
+
+        cutawayBtn.addEventListener("click", () => setCutaway(true));
+        fullSphereBtn.addEventListener("click", () => setCutaway(false));
+
+        bindOpacityControl("core", coreLayer.material);
+        bindOpacityControl("radiative", radiativeLayer.material);
+        bindOpacityControl("convective", convectiveLayer.material);
+        bindOpacityControl("shell", shellMaterial);
+        bindOpacityControl("corona", coronaMaterial);
+
+        setCutaway(true);
+
+        let lastTime = 0;
+
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+            const time = timestamp * 0.001;
+            const delta = Math.min(timestamp - lastTime || 16.7, 24);
+            lastTime = timestamp;
+
+            animatedMaterials.forEach((material) => {
+                material.uniforms.time.value = time;
+            });
+
+            coreLayer.mesh.rotation.y += 0.0009 * delta;
+            radiativeLayer.mesh.rotation.y += 0.00045 * delta;
+            convectiveLayer.mesh.rotation.y += 0.00115 * delta;
+            convectiveLayer.mesh.rotation.z = Math.sin(time * 0.18) * 0.03;
+            photosphere.rotation.y += 0.00072 * delta;
+            photosphere.rotation.x = Math.sin(time * 0.12) * 0.035;
+            shell.rotation.y += 0.00074 * delta;
+            shell.rotation.x = Math.sin(time * 0.11) * 0.034;
+            corona.rotation.y -= 0.00028 * delta;
+            corona.rotation.z = Math.sin(time * 0.24) * 0.08;
+            prominences.rotation.y += 0.00044 * delta;
+            prominences.rotation.z = Math.sin(time * 0.19) * 0.045;
+            solarGroup.rotation.y += 0.00012 * delta;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate(0);
+
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        });
+    </script>
 </body>
 </html>

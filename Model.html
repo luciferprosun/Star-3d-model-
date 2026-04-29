@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar Interior Model</title>
+    <title>NASA-Level Closed Star Model</title>
     <style>
         :root {
             color-scheme: dark;
@@ -23,9 +23,10 @@
             margin: 0;
             overflow: hidden;
             background:
-                radial-gradient(circle at 50% 50%, rgba(255, 118, 24, 0.08), transparent 12%),
-                radial-gradient(circle at 50% 50%, rgba(255, 172, 93, 0.04), transparent 28%),
-                linear-gradient(180deg, #0a0c13 0%, #03050b 100%);
+                radial-gradient(circle at 50% 50%, rgba(255, 116, 28, 0.12), transparent 14%),
+                radial-gradient(circle at 50% 50%, rgba(255, 193, 96, 0.06), transparent 34%),
+                radial-gradient(circle at 70% 20%, rgba(80, 120, 180, 0.08), transparent 28%),
+                linear-gradient(180deg, #05070d 0%, #010207 100%);
             font-family: "Segoe UI", Arial, sans-serif;
         }
 
@@ -37,8 +38,8 @@
             position: fixed;
             z-index: 10;
             border: 1px solid var(--border);
-            border-radius: 18px;
-            background: var(--panel);
+            border-radius: 12px;
+            background: rgba(5, 8, 13, 0.54);
             backdrop-filter: blur(10px);
             box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
             pointer-events: none;
@@ -115,6 +116,7 @@
 
         .control-button {
             flex: 1;
+            min-width: 0;
             border: 1px solid rgba(255, 182, 111, 0.18);
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.04);
@@ -177,42 +179,94 @@
         }
 
         @media (max-width: 740px) {
+            .panel {
+                border-radius: 10px;
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                max-width: none !important;
+                overflow: hidden;
+            }
+
+            .hero {
+                top: 12px;
+                padding: 12px 14px;
+            }
+
+            .hero .eyebrow,
+            .legend h2,
+            .controls h2 {
+                font-size: 10px;
+                letter-spacing: 0.14em;
+            }
+
+            .hero h1 {
+                font-size: 24px;
+                line-height: 1.12;
+            }
+
+            .hero p,
+            .legend li,
+            .legend p {
+                font-size: 12px;
+                line-height: 1.55;
+            }
+
             .legend {
-                left: 18px;
-                right: 18px;
-                width: auto;
+                bottom: 44px;
+                padding: 12px 14px;
             }
 
             .controls {
-                left: 18px;
-                right: 18px;
-                width: auto;
-                top: auto;
-                bottom: 184px;
+                top: 184px;
+                bottom: auto;
+                padding: 12px 14px;
+            }
+
+            .control-group {
+                margin-bottom: 10px;
+            }
+
+            .control-button {
+                border-radius: 10px;
+                font-size: 10px;
+                letter-spacing: 0.04em;
+                padding: 9px 6px;
+                white-space: nowrap;
+            }
+
+            .slider-row {
+                gap: 6px 10px;
+                margin-bottom: 8px;
             }
 
             .status {
                 width: calc(100vw - 36px);
                 text-align: center;
+                bottom: 10px;
+                font-size: 11px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
         }
     </style>
 </head>
 <body>
     <div class="panel hero">
-        <div class="eyebrow">Layered Solar Interior</div>
-        <h1>Full Sun Model</h1>
-        <p>Nowa kula zbudowana od zera jako pełny model warstw Słońca. Zamiast płaskiej tekstury na powierzchni masz przekrój pokazujący rdzeń, strefę promienistą, konwekcyjną, fotosferę i koronę oraz żywy ruch plazmy na zewnętrznej warstwie.</p>
+        <div class="eyebrow">Closed Star Rendering</div>
+        <h1>NASA Texture Solar Model</h1>
+        <p>Zamknięta struktura gwiazdy z teksturą fotosfery, aktywnymi obszarami plazmy, miękką koroną i filmowym ruchem. Przekrój wewnętrzny zostaje tylko jako tryb diagnostyczny.</p>
     </div>
 
     <div class="panel legend">
-        <h2>Model Layers</h2>
+        <h2>Render Stack</h2>
         <ul>
-            <li>Rdzeń: gęsty, jasny obszar reakcji termojądrowych</li>
-            <li>Strefa promienista: spokojniejsze, gorące warstwy transportu energii</li>
-            <li>Strefa konwekcyjna: komórki plazmy i wznoszące pęcherze energii</li>
-            <li>Fotosfera: żywa powierzchnia z filamentami i aktywnymi obszarami</li>
-            <li>Korona: cienka warstwa zewnętrzna z emisją przy brzegu</li>
+            <li>Zamknięta sfera bez widocznego jądra</li>
+            <li>Lokalne tekstury NASA jako mapa aktywności powierzchni</li>
+            <li>Proceduralne filamenty i wolno płynąca plazma</li>
+            <li>Miękki bloom/rim glow i korona przy krawędzi</li>
+            <li>Tryb diagnostyczny zachowany do kontroli warstw</li>
         </ul>
     </div>
 
@@ -220,30 +274,30 @@
         <h2>View Controls</h2>
         <div class="control-group">
             <div class="toggle-row">
-                <button class="control-button active" id="cutawayBtn" type="button">Cutaway</button>
-                <button class="control-button" id="fullSphereBtn" type="button">Full Sphere</button>
+                <button class="control-button" id="cutawayBtn" type="button">Diagnostics</button>
+                <button class="control-button active" id="fullSphereBtn" type="button">Closed Star</button>
             </div>
         </div>
         <div class="control-group">
             <div class="slider-row">
                 <label for="coreRange">Core</label>
-                <output id="coreOut">100%</output>
-                <input id="coreRange" type="range" min="0" max="100" value="100">
+                <output id="coreOut">0%</output>
+                <input id="coreRange" type="range" min="0" max="100" value="0">
             </div>
             <div class="slider-row">
                 <label for="radiativeRange">Radiative</label>
-                <output id="radiativeOut">72%</output>
-                <input id="radiativeRange" type="range" min="0" max="100" value="72">
+                <output id="radiativeOut">0%</output>
+                <input id="radiativeRange" type="range" min="0" max="100" value="0">
             </div>
             <div class="slider-row">
                 <label for="convectiveRange">Convective</label>
-                <output id="convectiveOut">58%</output>
-                <input id="convectiveRange" type="range" min="0" max="100" value="58">
+                <output id="convectiveOut">0%</output>
+                <input id="convectiveRange" type="range" min="0" max="100" value="0">
             </div>
             <div class="slider-row">
                 <label for="shellRange">Shell</label>
-                <output id="shellOut">92%</output>
-                <input id="shellRange" type="range" min="0" max="100" value="92">
+                <output id="shellOut">24%</output>
+                <input id="shellRange" type="range" min="0" max="100" value="24">
             </div>
             <div class="slider-row">
                 <label for="coronaRange">Corona</label>
@@ -253,10 +307,18 @@
         </div>
     </div>
 
-    <div class="status" id="statusLine">Interactive cutaway model live</div>
+    <div class="status" id="statusLine">Closed NASA-style star render live</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        window.addEventListener("error", (event) => {
+            const status = document.getElementById("statusLine");
+            if (status) {
+                status.textContent = `Render error: ${event.message}`;
+            }
+        });
+    </script>
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/OrbitControls.js"></script>
     <script>
         const statusLine = document.getElementById("statusLine");
         const cutawayBtn = document.getElementById("cutawayBtn");
@@ -293,6 +355,8 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.18;
         document.body.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -303,24 +367,34 @@
         controls.enablePan = false;
         controls.target.set(0, 0, 0);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
-        const solarLight = new THREE.PointLight(0xffb164, 3.2, 40, 2);
+        const solarLight = new THREE.PointLight(0xffb164, 4.8, 44, 2);
         solarLight.position.set(0, 0, 0);
         scene.add(solarLight);
 
-        const rimLight = new THREE.DirectionalLight(0xffd7b0, 0.6);
+        const rimLight = new THREE.DirectionalLight(0xffd7b0, 0.84);
         rimLight.position.set(3, 2.5, 3);
         scene.add(rimLight);
 
+        const textureLoader = new THREE.TextureLoader();
+        const surfaceTexture = textureLoader.load("assets/latest_1024_0304.jpg");
+        const magneticTexture = textureLoader.load("assets/latest_1024_HMIIC.jpg");
+        [surfaceTexture, magneticTexture].forEach((texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        });
+
         function createStarfield() {
-            const count = 4000;
+            const count = 5600;
             const positions = new Float32Array(count * 3);
             const colors = new Float32Array(count * 3);
             const geometry = new THREE.BufferGeometry();
 
             for (let i = 0; i < count; i += 1) {
-                const radius = 20 + Math.random() * 120;
+                const radius = 22 + Math.random() * 140;
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.acos(2 * Math.random() - 1);
                 const index = i * 3;
@@ -339,7 +413,7 @@
             geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
             return new THREE.Points(geometry, new THREE.PointsMaterial({
-                size: 0.08,
+                size: 0.065,
                 vertexColors: true,
                 transparent: true,
                 opacity: 0.78,
@@ -438,6 +512,8 @@
             uniform float time;
             uniform float radius;
             uniform float cutAngle;
+            uniform sampler2D surfaceMap;
+            uniform sampler2D magneticMap;
             varying vec3 vObjectPosition;
             varying vec3 vWorldPosition;
             varying vec3 vWorldNormal;
@@ -516,6 +592,14 @@
                 float darkLanes = smoothstep(0.52, 0.9, threads * (1.0 - cells));
                 float hotKnots = smoothstep(0.68, 0.96, cells + activeBands * 0.35);
                 float sunspots = sunspotField(fract(uv));
+                vec2 mapUv = fract(vec2(uv.x - time * 0.006, uv.y));
+                vec3 nasaMap = texture2D(surfaceMap, mapUv).rgb;
+                vec3 magneticMapColor = texture2D(magneticMap, fract(vec2(uv.x + time * 0.003, uv.y))).rgb;
+                float nasaLuma = dot(nasaMap, vec3(0.299, 0.587, 0.114));
+                float magneticLuma = dot(magneticMapColor, vec3(0.299, 0.587, 0.114));
+                float texturePlage = smoothstep(0.42, 0.86, nasaLuma);
+                float textureDark = smoothstep(0.18, 0.5, 1.0 - nasaLuma);
+                float magneticGrain = smoothstep(0.36, 0.78, magneticLuma);
 
                 vec3 dark = vec3(0.34, 0.11, 0.03);
                 vec3 ember = vec3(0.8, 0.29, 0.08);
@@ -526,22 +610,26 @@
                 vec3 color = mix(dark, ember, convection);
                 color = mix(color, mid, cells * 0.72);
                 color = mix(color, bright, hotKnots * 0.64);
+                color = mix(color, nasaMap * vec3(2.25, 1.42, 0.58), 0.54);
+                color += vec3(1.0, 0.64, 0.18) * texturePlage * 0.36;
+                color = mix(color, dark * 0.95, textureDark * 0.08);
+                color += vec3(1.0, 0.82, 0.38) * magneticGrain * 0.12;
                 color += flare * filaments * 0.16;
                 color += flare * activeBands * 0.22;
                 color = mix(color, dark * 0.8, darkLanes * 0.38);
-                color = mix(color, vec3(0.08, 0.02, 0.01), sunspots * 0.92);
-                color += bright * sunspots * 0.08;
+                color = mix(color, vec3(0.12, 0.035, 0.012), sunspots * 0.38);
+                color += bright * sunspots * 0.18;
 
                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
                 float fresnel = pow(1.0 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 2.7);
                 float limbDarkening = pow(max(dot(normalize(vWorldNormal), viewDir), 0.0), 0.5);
                 float cutFace = smoothstep(0.0, 0.07, obj.z + 0.01) * smoothstep(cutAngle + 0.16, cutAngle, normalized);
 
-                color *= mix(0.72, 1.0, limbDarkening);
-                color += vec3(1.0, 0.34, 0.08) * fresnel * (0.08 + activeBands * 0.08);
+                color *= mix(0.82, 1.12, limbDarkening);
+                color += vec3(1.0, 0.34, 0.08) * fresnel * (0.16 + activeBands * 0.12 + texturePlage * 0.1);
                 color += bright * cutFace * 0.34;
 
-                gl_FragColor = vec4(color, 1.0);
+                gl_FragColor = vec4(color * 1.16, 1.0);
             }
         `;
 
@@ -565,6 +653,7 @@
             uniform float time;
             uniform float radius;
             uniform float cutAngle;
+            uniform float opacityLevel;
             varying vec3 vObjectPosition;
             varying vec3 vWorldNormal;
             varying vec3 vWorldPosition;
@@ -593,10 +682,12 @@
                 vec2 uv = vec2(normalized / 6.28318530718, obj.y * 0.5 + 0.5);
                 float textureFlow = fbm(uv * vec2(12.0, 8.0) + vec2(time * 0.06, -time * 0.08));
                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-                float rim = pow(1.08 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 4.8);
-                float alpha = rim * (0.18 + textureFlow * 0.44);
-                vec3 color = mix(vec3(0.96, 0.18, 0.04), vec3(1.0, 0.72, 0.24), textureFlow);
-                gl_FragColor = vec4(color, alpha);
+                float facing = abs(dot(normalize(vWorldNormal), viewDir));
+                float rim = pow(1.0 - clamp(facing, 0.0, 1.0), 2.35);
+                float fineRays = smoothstep(0.52, 0.95, textureFlow) * rim;
+                float alpha = rim * (0.035 + textureFlow * 0.16) + fineRays * 0.08;
+                vec3 color = mix(vec3(0.95, 0.2, 0.04), vec3(1.0, 0.76, 0.26), textureFlow);
+                gl_FragColor = vec4(color, alpha * opacityLevel);
             }
         `;
 
@@ -697,6 +788,8 @@
             uniform float time;
             uniform float radius;
             uniform float cutAngle;
+            uniform sampler2D surfaceMap;
+            uniform float opacityLevel;
             varying vec3 vObjectPosition;
             varying vec3 vWorldNormal;
             varying vec3 vWorldPosition;
@@ -775,6 +868,9 @@
                 float active = smoothstep(0.62, 0.9, fbm(uv * vec2(10.0, 4.0) + vec2(time * 0.04, -time * 0.025)));
                 float plasma = max(filaments * 0.88, arches * 0.72);
                 float sunspots = sunspotField(fract(uv));
+                vec3 nasaMap = texture2D(surfaceMap, fract(vec2(uv.x - time * 0.005, uv.y))).rgb;
+                float nasaLuma = dot(nasaMap, vec3(0.299, 0.587, 0.114));
+                float activeTexture = smoothstep(0.48, 0.9, nasaLuma);
 
                 vec3 dark = vec3(0.28, 0.09, 0.03);
                 vec3 ember = vec3(0.86, 0.28, 0.08);
@@ -783,8 +879,9 @@
 
                 vec3 color = mix(dark, ember, convection);
                 color = mix(color, hot, cells * 0.7);
-                color += hot * plasma * 0.14;
-                color += core * active * 0.22;
+                color = mix(color, nasaMap * vec3(1.7, 1.02, 0.38), 0.34);
+                color += hot * plasma * 0.18;
+                color += core * max(active, activeTexture) * 0.26;
                 color = mix(color, vec3(0.1, 0.025, 0.01), sunspots * 0.78);
                 color += core * sunspots * 0.05;
 
@@ -792,14 +889,14 @@
                 float facing = max(dot(normalize(vWorldNormal), viewDir), 0.0);
                 float fresnel = pow(1.0 - facing, 3.2);
                 float rim = pow(1.08 - facing, 5.8);
-                float alpha = 0.16 + plasma * 0.12 + active * 0.08;
-                alpha += rim * (0.14 + active * 0.25);
+                float alpha = 0.12 + plasma * 0.12 + active * 0.08 + activeTexture * 0.08;
+                alpha += rim * (0.18 + max(active, activeTexture) * 0.3);
 
                 float cutFace = smoothstep(0.0, 0.06, obj.z + 0.015) * smoothstep(cutAngle + 0.14, cutAngle, normalized);
                 color += core * cutFace * 0.28;
                 color += vec3(1.0, 0.38, 0.1) * fresnel * 0.12;
 
-                gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.92));
+                gl_FragColor = vec4(color, clamp(alpha * opacityLevel, 0.0, 0.92));
             }
         `;
 
@@ -872,7 +969,9 @@
             uniforms: {
                 time: { value: 0 },
                 radius: { value: 1.5 },
-                cutAngle: { value: 1.25 }
+                cutAngle: { value: 0 },
+                surfaceMap: { value: surfaceTexture },
+                magneticMap: { value: magneticTexture }
             },
             vertexShader: layerVertexShader,
             fragmentShader: photosphereFragmentShader
@@ -888,13 +987,31 @@
             uniforms: {
                 time: { value: 0 },
                 radius: { value: 1.63 },
-                cutAngle: { value: 1.25 }
+                cutAngle: { value: 0 },
+                opacityLevel: { value: 1.0 }
             },
             vertexShader: coronaVertexShader,
             fragmentShader: coronaFragmentShader
         });
 
         const corona = new THREE.Mesh(new THREE.SphereGeometry(1.63, 192, 192), coronaMaterial);
+
+        const outerGlowMaterial = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.BackSide,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                time: { value: 0 },
+                radius: { value: 1.88 },
+                cutAngle: { value: 0 },
+                opacityLevel: { value: 0.24 }
+            },
+            vertexShader: coronaVertexShader,
+            fragmentShader: coronaFragmentShader
+        });
+
+        const outerGlow = new THREE.Mesh(new THREE.SphereGeometry(1.88, 160, 160), outerGlowMaterial);
 
         const prominenceMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -904,7 +1021,7 @@
             uniforms: {
                 time: { value: 0 },
                 radius: { value: 1.56 },
-                cutAngle: { value: 1.25 }
+                cutAngle: { value: 0 }
             },
             vertexShader: prominenceVertexShader,
             fragmentShader: prominenceFragmentShader
@@ -921,7 +1038,9 @@
             uniforms: {
                 time: { value: 0 },
                 radius: { value: 1.545 },
-                cutAngle: { value: 1.25 }
+                cutAngle: { value: 0 },
+                surfaceMap: { value: surfaceTexture },
+                opacityLevel: { value: 0.24 }
             },
             vertexShader: shellVertexShader,
             fragmentShader: shellFragmentShader
@@ -947,6 +1066,7 @@
         solarGroup.add(photosphere);
         solarGroup.add(shell);
         solarGroup.add(corona);
+        solarGroup.add(outerGlow);
         solarGroup.add(prominences);
         solarGroup.add(cutPlane);
 
@@ -957,10 +1077,11 @@
             photosphereMaterial,
             shellMaterial,
             coronaMaterial,
+            outerGlowMaterial,
             prominenceMaterial
         ];
 
-        let currentCutAngle = 1.25;
+        let currentCutAngle = 0.0;
 
         function setCutaway(enabled) {
             currentCutAngle = enabled ? 1.25 : 0.0;
@@ -972,7 +1093,7 @@
             cutPlane.visible = enabled;
             cutawayBtn.classList.toggle("active", enabled);
             fullSphereBtn.classList.toggle("active", !enabled);
-            statusLine.textContent = enabled ? "Interactive cutaway model live" : "Interactive full sphere model live";
+            statusLine.textContent = enabled ? "Diagnostic layer cutaway live" : "Closed NASA-style star render live";
         }
 
         function setMaterialOpacity(material, value) {
@@ -1003,7 +1124,7 @@
         bindOpacityControl("shell", shellMaterial);
         bindOpacityControl("corona", coronaMaterial);
 
-        setCutaway(true);
+        setCutaway(false);
 
         let lastTime = 0;
 
@@ -1027,6 +1148,8 @@
             shell.rotation.x = Math.sin(time * 0.11) * 0.034;
             corona.rotation.y -= 0.00028 * delta;
             corona.rotation.z = Math.sin(time * 0.24) * 0.08;
+            outerGlow.rotation.y -= 0.00018 * delta;
+            outerGlow.rotation.z = Math.sin(time * 0.17) * 0.06;
             prominences.rotation.y += 0.00044 * delta;
             prominences.rotation.z = Math.sin(time * 0.19) * 0.045;
             solarGroup.rotation.y += 0.00012 * delta;

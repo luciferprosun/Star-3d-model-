@@ -1,0 +1,127 @@
+name: Gemini Code Review
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "Model.html"
+      - "index.html"
+      - "server.py"
+      - "assets/**"
+      - "vendor/**"
+      - ".github/workflows/gemini-review.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "Model.html"
+      - "index.html"
+      - "server.py"
+      - "assets/**"
+      - "vendor/**"
+      - ".github/workflows/gemini-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review star model with Gemini
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      GEMINI_MODEL: gemini-2.5-flash-lite
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Gemini API key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY secret is missing." >&2
+            echo "Add it in GitHub: Settings -> Secrets and variables -> Actions -> New repository secret." >&2
+            exit 1
+          fi
+
+      - name: Ask Gemini to review Model.html
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import urllib.error
+          import urllib.request
+
+          model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+          api_key = os.environ["GEMINI_API_KEY"]
+          model_html = pathlib.Path("Model.html").read_text(encoding="utf-8")
+
+          prompt = f"""Przeprowadź techniczne code review pliku Model.html z projektu Three.js modelu gwiazdy.
+
+          Skup się na:
+          - błędach WebGL i shaderów,
+          - wydajności renderowania,
+          - responsywności UI na mobile/desktop,
+          - zgodności z GitHub Pages,
+          - konkretnych poprawkach o najwyższym priorytecie.
+
+          Odpowiedz po polsku. Zacznij od listy najważniejszych problemów, potem daj krótkie rekomendacje.
+
+          Kod Model.html:
+
+          ```html
+          {model_html}
+          ```
+          """
+
+          payload = {
+              "contents": [
+                  {
+                      "parts": [
+                          {"text": prompt}
+                      ]
+                  }
+              ]
+          }
+
+          request = urllib.request.Request(
+              f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json",
+                  "x-goog-api-key": api_key,
+              },
+              method="POST",
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  data = json.loads(response.read().decode("utf-8"))
+          except urllib.error.HTTPError as error:
+              body = error.read().decode("utf-8", errors="replace")
+              raise SystemExit(f"Gemini API returned HTTP {error.code}: {body}")
+
+          parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+          review = "".join(part.get("text", "") for part in parts).strip()
+          if not review:
+              review = "Gemini returned no text response.\n\n```json\n" + json.dumps(data, ensure_ascii=False, indent=2) + "\n```"
+
+          pathlib.Path("gemini-review.md").write_text(review + "\n", encoding="utf-8")
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as summary:
+                  summary.write("# Gemini Code Review\n\n")
+                  summary.write(review)
+                  summary.write("\n")
+          PY
+
+      - name: Upload Gemini review
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-code-review
+          path: gemini-review.md

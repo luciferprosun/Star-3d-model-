@@ -26,3 +26,13 @@ Each request is printed to the terminal and appended to `access.log` as JSON wit
 - path
 - user-agent
 - forwarded headers
+
+Gemini code review:
+
+```text
+GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret
+Name: GEMINI_API_KEY
+Value: your Gemini API key
+```
+
+Then run the `Gemini Code Review` workflow from the Actions tab, or let it run on `main` pushes and pull requests that touch the model files.

@@ -1,6 +1,13 @@
-# Star-3d-model-
+# Real-Time Star Simulation (Three.js / WebGL)
 
-Interactive solar interior model built as a standalone Three.js page.
+Interactive 3D visualization using shaders and procedural noise.
+
+*Focus:*
+- GPU-based rendering
+- real-time interaction
+- scientific-style visualization
+
+*Relevance:* Demonstrates capability to build high-performance visual interfaces for data exploration and simulation tools.
 
 Public page:
 
